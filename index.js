@@ -4,9 +4,10 @@ const express = require("express");
 const db = require("./data/db.js"); //we can access data from db.js file
 const server = express(); //call express to get server
 
+
+
 //middleware
 server.use(express.json());
-
 
 
 
@@ -14,7 +15,6 @@ server.use(express.json());
 server.get("/", (req, res) => {
   res.send("Hello World");
 });
-
 
 
 
@@ -28,26 +28,26 @@ server.listen(9090, () => {
 
 
 //CRUD
-
 //create/post - Creates a user using the information sent inside the request body.
 server.post("/api/users", (req, res) => {
   const user = req.body;
   //console.log("req body", req.body);
-  db.insert(user)
-    .then((user) => {
-      if (user) {
-        res.status(201).json(user); //If the information about the user is valid
-      } else {
-        res.status(400).json({
-          err: "Please provide name and bio for the user." //If the request body is missing the name or bio property
+  console.log("undefined user", user);
+  if (user.name === "" || user.bio === "") {
+    res.status(400).json({ err: " Please provide name and bio for the user." }); //If the request body is missing the name or bio property
+  } else {
+    db.insert(user)
+      .then((user) => {
+        if (user) {
+          res.status(201).json(user); //If the information about the user is valid
+        }
+      })
+      .catch((err) => {
+        res.status(500).json({
+          err: "There was an error while saving the user to the database" //If there's an error while saving the user
         });
-      }
-    })
-    .catch((err) => {
-      res.status(500).json({
-        err: "There was an error while saving the user to the database" //If there's an error while saving the user
       });
-    });
+  }
 });
 
 
@@ -66,61 +66,33 @@ server.get("/api/users", (req, res) => {
     });
 });
 
-//works without 404
+
+
+
 //update - Updates the user with the specified id using data from the request body. Returns the modified document, NOT the original.
-// server.put("/api/users/:id", (req, res) => {
-//   const { id } = req.params;
-//   const changes = req.body;
-//   //console.log("req body", req.body);
-//   db.update(id, changes)
-//     .then((user) => {
-//         if (user) {
-//             res.status(200).json(user);
-//         } else {
-//             res
-//             .status(400)
-//             .json({ err: "Please provide name and bio for the user." });
-//         }
-        
-//     })
-//     .catch((err) => {
-//       res.status(500).json({
-//         err: "The user information could not be modified."
-//       });
-//     });
-// });
-
-
-
-//with 404 status code
 server.put("/api/users/:id", (req, res) => {
-    const { id } = req.params;
-    const changes = req.body;
+  const { id } = req.params;
+  const changes = req.body;
+  if (!changes.name || !changes.bio) {
+    res.status(400).json({ err: "Please provide name and bio for the user." });
+  } else {
     db.update(id, changes)
-    .then((user) => {
-                if(!user.id) {
-                    res
-                    .status(404)
-                    .json({ err: "The user with the specified ID does not exist." });
-                }else {
-                    res.status(200).json(user); }
-            if(!user) {
-                res
-                .status(400)
-                .json({ err: "Please provide name and bio for the user." });
-            } else {
-                res.status(200).json(user); 
-            }})
-.catch((err) => {
-    res.status(500).json({
-      err: "The user information could not be modified."
-    });
-
-  });
+      .then((user) => {
+        if (user) {
+          res.status(200).json(user);
+        } else {
+          res
+            .status(404)
+            .json({ err: "The user with the specified ID does not exist." });
+        }
+      })
+      .catch((err) => {
+        res.status(500).json({
+          err: "The user information could not be modified."
+        });
+      });
+  }
 });
-
-
-
 
 
 
@@ -149,3 +121,24 @@ server.delete("/api/users/:id", (req, res) => {
 
 
 
+
+
+//get by id
+server.get("/api/users/:id", (req, res) => {
+  const { id } = req.params;
+  db.findById(id)
+    .then((user) => {
+      if (user) {
+        res.json(user);
+      } else {
+        res
+          .status(404)
+          .json({ err: "The user with the specified ID does not exist." });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        err: "The users information could not be retrieved." //If there's an error in retrieving the users from the database
+      });
+    });
+});
